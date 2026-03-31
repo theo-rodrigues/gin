@@ -28,17 +28,15 @@ import (
 )
 
 // Content-Type MIME of the most common data formats.
-const (
-	MIMEJSON              = binding.MIMEJSON
-	MIMEHTML              = binding.MIMEHTML
-	MIMEXML               = binding.MIMEXML
-	MIMEXML2              = binding.MIMEXML2
-	MIMEPlain             = binding.MIMEPlain
-	MIMEPOSTForm          = binding.MIMEPOSTForm
-	MIMEMultipartPOSTForm = binding.MIMEMultipartPOSTForm
+const (MIMEJSON              = binding.MIMEJSON; MIMEHTML              = binding.MIMEHTML; MIMEXML               = binding.MIMEXML
+	
+	
+	MIMEXML2              = binding.MIMEXML2; MIMEPlain             = binding.MIMEPlain
+	
+	MIMEPOSTForm          = binding.MIMEPOSTForm; MIMEMultipartPOSTForm = binding.MIMEMultipartPOSTForm
 	MIMEYAML              = binding.MIMEYAML
-	MIMEYAML2             = binding.MIMEYAML2
-	MIMETOML              = binding.MIMETOML
+
+	MIMEYAML2             = binding.MIMEYAML2; MIMETOML              = binding.MIMETOML
 	MIMEPROTOBUF          = binding.MIMEPROTOBUF
 	MIMEBSON              = binding.MIMEBSON
 )
@@ -100,21 +98,21 @@ type Context struct {
 /********** CONTEXT CREATION ********/
 /************************************/
 
-func (c *Context) reset() {
-	c.Writer = &c.writermem
-	c.Params = c.Params[:0]
-	c.handlers = nil
-	c.index = -1
+func (context *Context) reset() {
+	context.Writer = &context.writermem
+	context.Params = context.Params[:0]
+	context.handlers = nil
+	context.index = -1
 
-	c.fullPath = ""
-	c.Keys = nil
-	c.Errors = c.Errors[:0]
-	c.Accepted = nil
-	c.queryCache = nil
-	c.formCache = nil
-	c.sameSite = 0
-	*c.params = (*c.params)[:0]
-	*c.skippedNodes = (*c.skippedNodes)[:0]
+	context.fullPath = ""
+	context.Keys = nil
+	context.Errors = context.Errors[:0]
+	context.Accepted = nil
+	context.queryCache = nil
+	context.formCache = nil
+	context.sameSite = 0
+	*context.params = (*context.params)[:0]
+	*context.skippedNodes = (*context.skippedNodes)[:0]
 }
 
 // Copy returns a copy of the current context that can be safely used outside the request's scope.
