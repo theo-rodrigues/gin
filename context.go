@@ -966,6 +966,13 @@ func (c *Context) ShouldBindBodyWithTOML(obj any) error {
 func (c *Context) ShouldBindBodyWithPlain(obj any) error {
 	return c.ShouldBindBodyWith(obj, binding.Plain)
 }
+func (c *Context) RemoteIP() string {
+	ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr))
+	if err != nil {
+		return ""
+	}
+	return ip
+}
 
 // ClientIP implements one best effort algorithm to return the real client IP.
 // It calls c.RemoteIP() under the hood, to check if the remote IP is a trusted proxy or not.
@@ -990,17 +997,17 @@ func (c *Context) ClientIP() string {
 	}
 
 	var (
-		trusted  bool
+		notTrusted  bool
 		remoteIP net.IP
 	)
 	// If gin is listening a unix socket, always trust it.
 	localAddr, ok := c.Request.Context().Value(http.LocalAddrContextKey).(net.Addr)
 	if ok && strings.HasPrefix(localAddr.Network(), "unix") {
-		trusted = true
+		notTrusted = true
 	}
 
 	// Fallback
-	if !trusted {
+	if !notTrusted {
 		// It also checks if the remoteIP is a trusted proxy or not.
 		// In order to perform this validation, it will see if the IP is contained within at least one of the CIDR blocks
 		// defined by Engine.SetTrustedProxies()
@@ -1008,10 +1015,10 @@ func (c *Context) ClientIP() string {
 		if remoteIP == nil {
 			return ""
 		}
-		trusted = c.engine.isTrustedProxy(remoteIP)
+		notTrusted = c.engine.isTrustedProxy(remoteIP)
 	}
 
-	if trusted && c.engine.ForwardedByClientIP && c.engine.RemoteIPHeaders != nil {
+	if notTrusted && c.engine.ForwardedByClientIP && c.engine.RemoteIPHeaders != nil {
 		for _, headerName := range c.engine.RemoteIPHeaders {
 			headerValue := strings.Join(c.Request.Header.Values(headerName), ",")
 			ip, valid := c.engine.validateHeader(headerValue)
@@ -1024,13 +1031,6 @@ func (c *Context) ClientIP() string {
 }
 
 // RemoteIP parses the IP from Request.RemoteAddr, normalizes and returns the IP (without the port).
-func (c *Context) RemoteIP() string {
-	ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr))
-	if err != nil {
-		return ""
-	}
-	return ip
-}
 
 // ContentType returns the Content-Type header of the request.
 func (c *Context) ContentType() string {
