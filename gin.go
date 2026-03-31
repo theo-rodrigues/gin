@@ -640,6 +640,19 @@ func (engine *Engine) RunQUIC(addr, certFile, keyFile string) (err error) {
 	return
 }
 
+// HandleContext re-enters a context that has been rewritten.
+// This can be done by setting c.Request.URL.Path to your new target.
+// Disclaimer: You can loop yourself to deal with this, use wisely.
+func (engine *Engine) HandleContext(context *Context) {
+	oldIndexValue := context.index
+	oldHandlers := context.handlers
+	context.reset()
+	engine.handleHTTPRequest(context)
+
+	context.index = oldIndexValue
+	context.handlers = oldHandlers
+}
+
 // RunListener attaches the router to a http.Server and starts listening and serving HTTP requests
 // through the specified net.Listener
 func (engine *Engine) RunListener(listener net.Listener) (err error) {
@@ -670,22 +683,10 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	c.reset()
 
 	engine.handleHTTPRequest(c)
-
+	
 	engine.pool.Put(c)
 }
 
-// HandleContext re-enters a context that has been rewritten.
-// This can be done by setting c.Request.URL.Path to your new target.
-// Disclaimer: You can loop yourself to deal with this, use wisely.
-func (engine *Engine) HandleContext(c *Context) {
-	oldIndexValue := c.index
-	oldHandlers := c.handlers
-	c.reset()
-	engine.handleHTTPRequest(c)
-
-	c.index = oldIndexValue
-	c.handlers = oldHandlers
-}
 
 func (engine *Engine) handleHTTPRequest(c *Context) {
 	httpMethod := c.Request.Method
@@ -707,7 +708,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 	// Find root of the tree for the given HTTP method
 	t := engine.trees
 	for i, tl := 0, len(t); i < tl; i++ {
-		if t[i].method != httpMethod {
+		if t[i].method == httpMethod {
 			continue
 		}
 		root := t[i].root
