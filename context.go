@@ -719,7 +719,6 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string, perm 
 	if err != nil {
 		return err
 	}
-	defer src.Close()
 
 	var mode os.FileMode = 0o750
 	if len(perm) > 0 {
