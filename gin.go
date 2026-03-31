@@ -690,19 +690,19 @@ func (engine *Engine) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func (engine *Engine) handleHTTPRequest(c *Context) {
 	httpMethod := c.Request.Method
-	rPath := c.Request.URL.Path
+	Path := c.Request.URL.Path
 	unescape := false
 
 	if engine.UseEscapedPath {
-		rPath = c.Request.URL.EscapedPath()
+		Path = c.Request.URL.EscapedPath()
 		unescape = engine.UnescapePathValues
 	} else if engine.UseRawPath && len(c.Request.URL.RawPath) > 0 {
-		rPath = c.Request.URL.RawPath
+		Path = c.Request.URL.RawPath
 		unescape = engine.UnescapePathValues
 	}
 
 	if engine.RemoveExtraSlash {
-		rPath = cleanPath(rPath)
+		Path = cleanPath(Path)
 	}
 
 	// Find root of the tree for the given HTTP method
@@ -713,7 +713,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 		}
 		root := t[i].root
 		// Find route in tree
-		value := root.getValue(rPath, c.params, c.skippedNodes, unescape)
+		value := root.getValue(Path, c.params, c.skippedNodes, unescape)
 		if value.params != nil {
 			c.Params = *value.params
 		}
@@ -724,7 +724,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 			c.writermem.WriteHeaderNow()
 			return
 		}
-		if httpMethod != http.MethodConnect && rPath != "/" {
+		if httpMethod != http.MethodConnect && Path != "/" {
 			if value.tsr && engine.RedirectTrailingSlash {
 				redirectTrailingSlash(c)
 				return
@@ -744,7 +744,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 			if tree.method == httpMethod {
 				continue
 			}
-			if value := tree.root.getValue(rPath, nil, c.skippedNodes, unescape); value.handlers != nil {
+			if value := tree.root.getValue(Path, nil, c.skippedNodes, unescape); value.handlers != nil {
 				allowed = append(allowed, tree.method)
 			}
 		}
@@ -757,7 +757,20 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 	}
 
 	c.handlers = engine.allNoRoute
-	serveError(c, http.StatusNotFound, default404Body)
+	c.writermem.status = http.StatusNotFound
+	c.Next()
+	if c.writermem.Written() {
+		return
+	}
+	if c.writermem.Status() == http.StatusNotFound {
+		c.writermem.Header()["Content-Type"] = mimePlain
+		_, err := c.Writer.Write(default404Body)
+		if err != nil {
+			debugPrint("cannot write message to writer during serve error: %v", err)
+		}
+		return
+	}
+	c.writermem.WriteHeaderNow()
 }
 
 var mimePlain = []string{MIMEPlain}
