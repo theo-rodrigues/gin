@@ -1146,19 +1146,13 @@ func (c *Context) Cookie(name string) (string, error) {
 }
 
 // Render writes the response headers and calls render.Render to render data.
-func (c *Context) Render(code int, r render.Render) {
-	c.Status(code)
+func (context *Context) Render(code int, r render.Render) {
+	context.Status(code)
 
-	if !bodyAllowedForStatus(code) {
-		r.WriteContentType(c.Writer)
-		c.Writer.WriteHeaderNow()
-		return
-	}
-
-	if err := r.Render(c.Writer); err != nil {
+	if err := r.Render(context.Writer); err != nil {
 		// Pushing error to c.Errors
-		_ = c.Error(err)
-		c.Abort()
+		_ = context.Error(err)
+		context.Abort()
 	}
 }
 
