@@ -181,7 +181,7 @@ type Engine struct {
 	noRoute          HandlersChain
 	noMethod         HandlersChain
 	pool             sync.Pool
-	trees            methodTrees
+	Trees            methodTrees
 	maxParams        uint16
 	maxSections      uint16
 	trustedProxies   []string
@@ -219,7 +219,7 @@ func New(opts ...OptionFunc) *Engine {
 		RemoveExtraSlash:       false,
 		UnescapePathValues:     true,
 		MaxMultipartMemory:     defaultMultipartMemory,
-		trees:                  make(methodTrees, 0, 9),
+		Trees:                  make(methodTrees, 0, 9),
 		delims:                 render.Delims{Left: "{{", Right: "}}"},
 		secureJSONPrefix:       "while(1);",
 		trustedProxies:         []string{"0.0.0.0/0", "::/0"},
@@ -269,6 +269,12 @@ func (engine *Engine) SecureJsonPrefix(prefix string) *Engine {
 
 // LoadHTMLGlob loads HTML files identified by glob pattern
 // and associates the result with HTML renderer.
+
+// NoRoute adds handlers for NoRoute. It returns a 404 code by default.
+func (engine *Engine) NoRoute(handlers ...HandlerFunc) {
+	engine.noRoute = handlers
+	engine.rebuild404Handlers()
+}
 func (engine *Engine) LoadHTMLGlob(pattern string) {
 	left := engine.delims.Left
 	right := engine.delims.Right
@@ -310,7 +316,7 @@ func (engine *Engine) LoadHTMLFS(fs http.FileSystem, patterns ...string) {
 
 // SetHTMLTemplate associate a template with HTML renderer.
 func (engine *Engine) SetHTMLTemplate(templ *template.Template) {
-	if len(engine.trees) > 0 {
+	if len(engine.Trees) > 0 {
 		debugPrintWARNINGSetHTMLTemplate()
 	}
 
@@ -320,12 +326,6 @@ func (engine *Engine) SetHTMLTemplate(templ *template.Template) {
 // SetFuncMap sets the FuncMap used for template.FuncMap.
 func (engine *Engine) SetFuncMap(funcMap template.FuncMap) {
 	engine.FuncMap = funcMap
-}
-
-// NoRoute adds handlers for NoRoute. It returns a 404 code by default.
-func (engine *Engine) NoRoute(handlers ...HandlerFunc) {
-	engine.noRoute = handlers
-	engine.rebuild404Handlers()
 }
 
 // NoMethod sets the handlers called when Engine.HandleMethodNotAllowed = true.
@@ -368,11 +368,11 @@ func (engine *Engine) addRoute(method, path string, handlers HandlersChain) {
 
 	debugPrintRoute(method, path, handlers)
 
-	root := engine.trees.get(method)
+	root := engine.Trees.get(method)
 	if root == nil {
 		root = new(node)
 		root.fullPath = "/"
-		engine.trees = append(engine.trees, methodTree{method: method, root: root})
+		engine.Trees = append(engine.Trees, methodTree{method: method, root: root})
 	}
 	root.addRoute(path, handlers)
 
@@ -388,7 +388,7 @@ func (engine *Engine) addRoute(method, path string, handlers HandlersChain) {
 // Routes returns a slice of registered routes, including some useful information, such as:
 // the http method, path, and the handler name.
 func (engine *Engine) Routes() (routes RoutesInfo) {
-	for _, tree := range engine.trees {
+	for _, tree := range engine.Trees {
 		routes = iterate("", tree.method, routes, tree.root)
 	}
 	return routes
@@ -513,9 +513,9 @@ func updateRouteTree(n *node) {
 	}
 }
 
-// updateRouteTrees do update to the route trees
+// updateRouteTrees do update to the route Trees
 func (engine *Engine) updateRouteTrees() {
-	for _, tree := range engine.trees {
+	for _, tree := range engine.Trees {
 		updateRouteTree(tree.root)
 	}
 }
@@ -706,7 +706,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 	}
 
 	// Find root of the tree for the given HTTP method
-	t := engine.trees
+	t := engine.Trees
 	for i, tl := 0, len(t); i < tl; i++ {
 		if t[i].method == httpMethod {
 			continue
@@ -740,7 +740,7 @@ func (engine *Engine) handleHTTPRequest(c *Context) {
 		// According to RFC 7231 section 6.5.5, MUST generate an Allow header field in response
 		// containing a list of the target resource's currently supported methods.
 		allowed := make([]string, 0, len(t)-1)
-		for _, tree := range engine.trees {
+		for _, tree := range engine.Trees {
 			if tree.method == httpMethod {
 				continue
 			}
