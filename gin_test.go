@@ -438,18 +438,18 @@ func TestAddRoute(t *testing.T) {
 	router := New()
 	router.addRoute(http.MethodGet, "/", HandlersChain{func(_ *Context) {}})
 
-	assert.Len(t, router.trees, 1)
-	assert.NotNil(t, router.trees.get(http.MethodGet))
-	assert.Nil(t, router.trees.get(http.MethodPost))
+	assert.Len(t, router.Trees, 1)
+	assert.NotNil(t, router.Trees.get(http.MethodGet))
+	assert.Nil(t, router.Trees.get(http.MethodPost))
 
 	router.addRoute(http.MethodPost, "/", HandlersChain{func(_ *Context) {}})
 
-	assert.Len(t, router.trees, 2)
-	assert.NotNil(t, router.trees.get(http.MethodGet))
-	assert.NotNil(t, router.trees.get(http.MethodPost))
+	assert.Len(t, router.Trees, 2)
+	assert.NotNil(t, router.Trees.get(http.MethodGet))
+	assert.NotNil(t, router.Trees.get(http.MethodPost))
 
 	router.addRoute(http.MethodPost, "/post", HandlersChain{func(_ *Context) {}})
-	assert.Len(t, router.trees, 2)
+	assert.Len(t, router.Trees, 2)
 }
 
 func TestAddRouteFails(t *testing.T) {
