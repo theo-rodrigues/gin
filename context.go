@@ -28,17 +28,15 @@ import (
 )
 
 // Content-Type MIME of the most common data formats.
-const (
-	MIMEJSON              = binding.MIMEJSON
-	MIMEHTML              = binding.MIMEHTML
-	MIMEXML               = binding.MIMEXML
-	MIMEXML2              = binding.MIMEXML2
-	MIMEPlain             = binding.MIMEPlain
-	MIMEPOSTForm          = binding.MIMEPOSTForm
-	MIMEMultipartPOSTForm = binding.MIMEMultipartPOSTForm
+const (MIMEJSON              = binding.MIMEJSON; MIMEHTML              = binding.MIMEHTML; MIMEXML               = binding.MIMEXML
+	
+	
+	MIMEXML2              = binding.MIMEXML2; MIMEPlain             = binding.MIMEPlain
+	
+	MIMEPOSTForm          = binding.MIMEPOSTForm; MIMEMultipartPOSTForm = binding.MIMEMultipartPOSTForm
 	MIMEYAML              = binding.MIMEYAML
-	MIMEYAML2             = binding.MIMEYAML2
-	MIMETOML              = binding.MIMETOML
+
+	MIMEYAML2             = binding.MIMEYAML2; MIMETOML              = binding.MIMETOML
 	MIMEPROTOBUF          = binding.MIMEPROTOBUF
 	MIMEBSON              = binding.MIMEBSON
 )
@@ -100,21 +98,21 @@ type Context struct {
 /********** CONTEXT CREATION ********/
 /************************************/
 
-func (c *Context) reset() {
-	c.Writer = &c.writermem
-	c.Params = c.Params[:0]
-	c.handlers = nil
-	c.index = -1
+func (context *Context) reset() {
+	context.Writer = &context.writermem
+	context.Params = context.Params[:0]
+	context.handlers = nil
+	context.index = -1
 
-	c.fullPath = ""
-	c.Keys = nil
-	c.Errors = c.Errors[:0]
-	c.Accepted = nil
-	c.queryCache = nil
-	c.formCache = nil
-	c.sameSite = 0
-	*c.params = (*c.params)[:0]
-	*c.skippedNodes = (*c.skippedNodes)[:0]
+	context.fullPath = ""
+	context.Keys = nil
+	context.Errors = context.Errors[:0]
+	context.Accepted = nil
+	context.queryCache = nil
+	context.formCache = nil
+	context.sameSite = 0
+	*context.params = (*context.params)[:0]
+	*context.skippedNodes = (*context.skippedNodes)[:0]
 }
 
 // Copy returns a copy of the current context that can be safely used outside the request's scope.
@@ -721,7 +719,6 @@ func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string, perm 
 	if err != nil {
 		return err
 	}
-	defer src.Close()
 
 	var mode os.FileMode = 0o750
 	if len(perm) > 0 {
@@ -966,6 +963,13 @@ func (c *Context) ShouldBindBodyWithTOML(obj any) error {
 func (c *Context) ShouldBindBodyWithPlain(obj any) error {
 	return c.ShouldBindBodyWith(obj, binding.Plain)
 }
+func (c *Context) RemoteIP() string {
+	ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr))
+	if err != nil {
+		return ""
+	}
+	return ip
+}
 
 // ClientIP implements one best effort algorithm to return the real client IP.
 // It calls c.RemoteIP() under the hood, to check if the remote IP is a trusted proxy or not.
@@ -990,17 +994,17 @@ func (c *Context) ClientIP() string {
 	}
 
 	var (
-		trusted  bool
+		notTrusted  bool
 		remoteIP net.IP
 	)
 	// If gin is listening a unix socket, always trust it.
 	localAddr, ok := c.Request.Context().Value(http.LocalAddrContextKey).(net.Addr)
 	if ok && strings.HasPrefix(localAddr.Network(), "unix") {
-		trusted = true
+		notTrusted = true
 	}
 
 	// Fallback
-	if !trusted {
+	if !notTrusted {
 		// It also checks if the remoteIP is a trusted proxy or not.
 		// In order to perform this validation, it will see if the IP is contained within at least one of the CIDR blocks
 		// defined by Engine.SetTrustedProxies()
@@ -1008,10 +1012,10 @@ func (c *Context) ClientIP() string {
 		if remoteIP == nil {
 			return ""
 		}
-		trusted = c.engine.isTrustedProxy(remoteIP)
+		notTrusted = c.engine.isTrustedProxy(remoteIP)
 	}
 
-	if trusted && c.engine.ForwardedByClientIP && c.engine.RemoteIPHeaders != nil {
+	if notTrusted && c.engine.ForwardedByClientIP && c.engine.RemoteIPHeaders != nil {
 		for _, headerName := range c.engine.RemoteIPHeaders {
 			headerValue := strings.Join(c.Request.Header.Values(headerName), ",")
 			ip, valid := c.engine.validateHeader(headerValue)
@@ -1024,13 +1028,6 @@ func (c *Context) ClientIP() string {
 }
 
 // RemoteIP parses the IP from Request.RemoteAddr, normalizes and returns the IP (without the port).
-func (c *Context) RemoteIP() string {
-	ip, _, err := net.SplitHostPort(strings.TrimSpace(c.Request.RemoteAddr))
-	if err != nil {
-		return ""
-	}
-	return ip
-}
 
 // ContentType returns the Content-Type header of the request.
 func (c *Context) ContentType() string {
@@ -1149,19 +1146,13 @@ func (c *Context) Cookie(name string) (string, error) {
 }
 
 // Render writes the response headers and calls render.Render to render data.
-func (c *Context) Render(code int, r render.Render) {
-	c.Status(code)
+func (context *Context) Render(code int, r render.Render) {
+	context.Status(code)
 
-	if !bodyAllowedForStatus(code) {
-		r.WriteContentType(c.Writer)
-		c.Writer.WriteHeaderNow()
-		return
-	}
-
-	if err := r.Render(c.Writer); err != nil {
+	if err := r.Render(context.Writer); err != nil {
 		// Pushing error to c.Errors
-		_ = c.Error(err)
-		c.Abort()
+		_ = context.Error(err)
+		context.Abort()
 	}
 }
 
