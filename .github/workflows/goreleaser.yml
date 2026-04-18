@@ -3,10 +3,10 @@ name: Goreleaser
 on:
   push:
     tags:
-      - "*"
+      - "*-"
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   goreleaser:
@@ -23,7 +23,7 @@ jobs:
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v7
         with:
-          # either 'goreleaser' (default) or 'goreleaser-pro'
+          # either 'goreleaser' (default) or 'goreleaser-pro' 
           distribution: goreleaser
           version: latest
           args: release --clean
@@ -34,3 +34,5 @@ jobs:
         run: |
           echo "Triggering Go module reindex at proxy.golang.org"
           curl -sSf "https://proxy.golang.org/github.com/${GITHUB_REPOSITORY,,}/@v/${GITHUB_REF_NAME}.info"
+
+          
